@@ -42,7 +42,13 @@ Puppet::Type.type(:f5_pool).provide(:f5_pool, :parent => Puppet::Provider::F5) d
   methods.each do |method|
     define_method(method.to_sym) do
       if transport[wsdl].respond_to?("get_#{method}".to_sym)
-        transport[wsdl].send("get_#{method}", resource[:name]).first.to_s
+        begin
+          transport[wsdl].send("get_#{method}", resource[:name]).first.to_s
+        rescue SOAP::FaultError => e
+          raise e unless e.message =~ /NotImplemented/
+          Puppet.debug "iControl method #{wsdl}::get_#{method} is not implemented, returning nil"
+          nil
+        end
       end
     end
   end
@@ -50,7 +56,13 @@ Puppet::Type.type(:f5_pool).provide(:f5_pool, :parent => Puppet::Provider::F5) d
   methods.each do |method|
     define_method("#{method}=") do |value|
       if transport[wsdl].respond_to?("set_#{method}".to_sym)
-        transport[wsdl].send("set_#{method}", resource[:name], resource[method.to_sym])
+        begin
+          transport[wsdl].send("set_#{method}", resource[:name], resource[method.to_sym])
+        rescue SOAP::FaultError => e
+          raise e unless e.message =~ /NotImplemented/
+          Puppet.debug "iControl method #{wsdl}::set_#{method} is not implemented"
+          nil
+        end
       end
     end
   end
